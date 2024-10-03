@@ -156,7 +156,7 @@ class Api:
                         auth_header = auth_header.split(None, 1)[-1]
                         if auth_header and auth_header != "Bearer":
                             config.api_key = auth_header
-                response = self.client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     **{
                         **AppConfig.defaults,
                         **config.dict(exclude_none=True),
@@ -164,7 +164,7 @@ class Api:
                     ignored=AppConfig.ignored_providers
                 )
                 if not config.stream:
-                    return JSONResponse((await response).to_json())
+                    return JSONResponse(response.to_json())
 
                 async def streaming():
                     try:
@@ -196,10 +196,10 @@ class Api:
                         auth_header = auth_header.split(None, 1)[-1]
                         if auth_header and auth_header != "Bearer":
                             config.api_key = auth_header
-                response = self.client.images.generate(
+                response = await self.client.images.generate(
                     **config.dict(exclude_none=True),
                 )
-                return JSONResponse((await response).to_json())
+                return JSONResponse(response.to_json())
             except Exception as e:
                 logging.exception(e)
                 return Response(content=format_exception(e, config), status_code=500, media_type="application/json")

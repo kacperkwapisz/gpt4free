@@ -156,16 +156,20 @@ class Api:
                         auth_header = auth_header.split(None, 1)[-1]
                         if auth_header and auth_header != "Bearer":
                             config.api_key = auth_header
-                response = self.client.chat.completions.create(
+
+                # Await the response here before using it in streaming
+                response = await self.client.chat.completions.create(
                     **{
                         **AppConfig.defaults,
                         **config.dict(exclude_none=True),
                     },
                     ignored=AppConfig.ignored_providers
                 )
-                if not config.stream:
-                    return JSONResponse((await response).to_json())
 
+                if not config.stream:
+                    return JSONResponse(response.to_json())
+
+                # Define the streaming function inside to capture the awaited response
                 async def streaming():
                     try:
                         async for chunk in response:
@@ -176,6 +180,8 @@ class Api:
                         logging.exception(e)
                         yield f'data: {format_exception(e, config)}\n\n'
                     yield "data: [DONE]\n\n"
+
+                # Return the StreamingResponse
                 return StreamingResponse(streaming(), media_type="text/event-stream")
 
             except Exception as e:
@@ -226,7 +232,7 @@ def run_api(
     if bind is not None:
         host, port = bind.split(":")
     uvicorn.run(
-        f"g4f.api:create_app{'_debug' if debug else ''}",
+        f"api:create_app{'_debug' if debug else ''}",
         host=host, port=int(port),
         workers=workers,
         use_colors=use_colors,
